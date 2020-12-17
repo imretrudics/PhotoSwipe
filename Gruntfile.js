@@ -6,9 +6,13 @@
  * 
  */
 
+
+
 module.exports = function(grunt) {
 
   'use strict';
+
+  const sass = require('node-sass');
 
   var jekyllConfig = "isLocal : false \r\n"+
       "permalink: /:title/ \r\n"+
@@ -19,7 +23,7 @@ module.exports = function(grunt) {
       "auto: true \r\n"+
       "pswpversion: <%= pkg.version %> \r\n"+
       "siteversion: 1.0.4 \r\n"+
-      "markdown: redcarpet \r\n"+
+      "markdown: kramdown \r\n"+
       "kramdown: \r\n"+
       "  input: GFM \r\n";
 
@@ -42,7 +46,11 @@ module.exports = function(grunt) {
       files: ['dist']
     },
     
-    sass: {                            
+    sass: {     
+      options: {
+        implementation: sass,
+        sourceMap: true
+    },                       
       dist: {                      
         files: {      
           'dist/photoswipe.css': 'src/css/main.scss',
@@ -82,7 +90,8 @@ module.exports = function(grunt) {
           'items-controller',
           'tap',
           'desktop-zoom',
-          'history'
+          'history',
+          'animate-slide'
         ],
         basePath: 'src/js/',
         dest: 'dist/photoswipe.js',
@@ -252,11 +261,13 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-cssmin');
   grunt.loadNpmTasks('grunt-svgmin');
 
-  // Default task.
-  grunt.registerTask('default', ['sass', 'autoprefixer', 'pswpbuild','uglify', 'copy', 'jekyll:dev']);
+  
 
   grunt.registerTask('production', ['sass', 'autoprefixer', 'pswpbuild', 'uglify', 'copy', 'cssmin', 'jekyll:production']);
   grunt.registerTask('nosite', ['sass', 'autoprefixer', 'pswpbuild', 'uglify']);
   grunt.registerTask('hint', ['jshint']);
+
+// Default task.
+grunt.registerTask('default', ['sass', 'autoprefixer', 'pswpbuild','uglify', 'copy', 'jekyll:dev']);
 
 };

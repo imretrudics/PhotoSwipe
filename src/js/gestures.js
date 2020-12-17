@@ -4,7 +4,7 @@
  * separated from @core.js for readability
  */
 
-var MIN_SWIPE_DISTANCE = 30,
+var MIN_SWIPE_DISTANCE = 100,
 	DIRECTION_CHECK_OFFSET = 10; // amount of pixels to drag to determine direction of swipe
 
 var _gestureStartTime,

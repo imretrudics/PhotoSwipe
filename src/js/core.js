@@ -16,6 +16,7 @@ var _options = {
 	spacing: 0.12,
 	bgOpacity: 1,
 	mouseUsed: false,
+	hideScroll: true,
 	loop: true,
 	pinchToClose: true,
 	closeOnScroll: true,
@@ -153,6 +154,8 @@ var _isOpen,
 		}
 			
 		styleObj[_transformKey] = _translatePrefix + x + 'px, ' + y + 'px' + _translateSufix + ' scale(' + zoom + ')';
+
+		_shout('zoomChanged', zoom);
 	},
 	_applyCurrentZoomPan = function( allowRenderResolution ) {
 		if(_currZoomElementStyle) {
@@ -370,9 +373,9 @@ var _isOpen,
 			keydownAction = 'close';
 		} else if(_options.arrowKeys) {
 			if(e.keyCode === 37) {
-				keydownAction = 'prev';
+				keydownAction = 'prevAnim';
 			} else if(e.keyCode === 39) { 
-				keydownAction = 'next';
+				keydownAction = 'nextAnim';
 			}
 		}
 
@@ -567,6 +570,14 @@ var publicMethods = {
 		// disable show/hide effects on old browsers that don't support CSS animations or transforms, 
 		// old IOS, Android and Opera mobile. Blackberry seems to work fine, even older models.
 		var oldPhone = _features.isOldIOSPhone || _features.isOldAndroid || _features.isMobileOpera;
+
+		_features.hideScroll = (_options.hideScroll && !oldPhone && _options.modal && document.body.clientWidth);
+        if (_features.hideScroll) {
+            _features.restoreScroll = document.body.getAttribute('style');
+            document.body.style.width = window.getComputedStyle(document.body).width;
+            document.body.style.overflow = 'hidden';
+        }
+
 		if(!_features.animationName || !_features.transform || oldPhone) {
 			_options.showAnimationDuration = _options.hideAnimationDuration = 0;
 		}
@@ -691,6 +702,14 @@ var publicMethods = {
 		_isDestroying = true;
 		_shout('close');
 		_unbindEvents();
+
+		if (_features.hideScroll) {
+            if (_features.restoreScroll) {
+                document.body.setAttribute('style', _features.restoreScroll);
+            } else {
+                document.body.removeAttribute('style');
+            }
+        }
 
 		_showOrHide(self.currItem, null, true, self.destroy);
 	},

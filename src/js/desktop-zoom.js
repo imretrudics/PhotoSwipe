@@ -158,7 +158,8 @@ _registerModule('DesktopZoom', {
 			centerPoint = centerPoint || {x:_viewportSize.x/2 + _offset.x, y:_viewportSize.y/2 + _offset.y };
 
 			var doubleTapZoomLevel = _options.getDoubleTapZoom(true, self.currItem);
-			var zoomOut = _currZoomLevel === doubleTapZoomLevel;
+			// var zoomOut = _currZoomLevel === doubleTapZoomLevel;
+			var zoomOut = _currZoomLevel > 1;
 			
 			self.mouseZoomedIn = !zoomOut;
 

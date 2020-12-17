@@ -115,12 +115,14 @@ var PhotoSwipeUI_Default =
 
 			var target = e.target || e.srcElement,
 				uiElement,
-				clickedClass = target.getAttribute('class') || '',
 				found;
+
+			var closestButton = target.closest('button');
+			var clickedClass = closestButton ? closestButton.getAttribute('class') : '';
 
 			for(var i = 0; i < _uiElements.length; i++) {
 				uiElement = _uiElements[i];
-				if(uiElement.onTap && clickedClass.indexOf('pswp__' + uiElement.name ) > -1 ) {
+				if(uiElement.onTap && clickedClass.indexOf('pswp__' + uiElement.name ) > -1) {
 					uiElement.onTap();
 					found = true;
 
@@ -330,7 +332,8 @@ var PhotoSwipeUI_Default =
 		},
 		_toggleLoadingIndicator = function(hide) {
 			if( _loadingIndicatorHidden !== hide ) {
-				_togglePswpClass(_loadingIndicator, 'preloader--active', !hide);
+				pswp.shout('toggleLoadingIndicator', !hide);
+				// _togglePswpClass(_loadingIndicator, 'preloader--active', !hide);
 				_loadingIndicatorHidden = hide;
 			}
 		},
@@ -460,14 +463,14 @@ var PhotoSwipeUI_Default =
 			onTap: pswp.close
 		},
 		{ 
-			name: 'button--arrow--left', 
+			name: 'button--arrow--previous', 
 			option: 'arrowEl',
-			onTap: pswp.prev
+			onTap: pswp.prevAnim
 		},
 		{ 
-			name: 'button--arrow--right', 
+			name: 'button--arrow--next', 
 			option: 'arrowEl',
-			onTap: pswp.next
+			onTap: pswp.nextAnim
 		},
 		{ 
 			name: 'button--fs', 
@@ -762,7 +765,6 @@ var PhotoSwipeUI_Default =
 	ui.onMouseOver = function(e) {
 		e = e || window.event;
 		var target = e.target || e.srcElement;
-
 		// add class when mouse is over an element that should close the gallery
 		_togglePswpClass(_controls, 'ui--over-close', _hasCloseClass(target));
 	};

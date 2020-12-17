@@ -1,6 +1,6 @@
-/*! PhotoSwipe - v4.1.3 - 2019-01-08
+/*! PhotoSwipe - v4.1.3 - 2020-12-17
 * http://photoswipe.com
-* Copyright (c) 2019 Dmitry Semenov; */
+* Copyright (c) 2020 Dmitry Semenov; */
 (function (root, factory) { 
 	if (typeof define === 'function' && define.amd) {
 		define(factory);
@@ -314,6 +314,7 @@ var _options = {
 	spacing: 0.12,
 	bgOpacity: 1,
 	mouseUsed: false,
+	hideScroll: true,
 	loop: true,
 	pinchToClose: true,
 	closeOnScroll: true,
@@ -451,6 +452,8 @@ var _isOpen,
 		}
 			
 		styleObj[_transformKey] = _translatePrefix + x + 'px, ' + y + 'px' + _translateSufix + ' scale(' + zoom + ')';
+
+		_shout('zoomChanged', zoom);
 	},
 	_applyCurrentZoomPan = function( allowRenderResolution ) {
 		if(_currZoomElementStyle) {
@@ -668,9 +671,9 @@ var _isOpen,
 			keydownAction = 'close';
 		} else if(_options.arrowKeys) {
 			if(e.keyCode === 37) {
-				keydownAction = 'prev';
+				keydownAction = 'prevAnim';
 			} else if(e.keyCode === 39) { 
-				keydownAction = 'next';
+				keydownAction = 'nextAnim';
 			}
 		}
 
@@ -865,6 +868,14 @@ var publicMethods = {
 		// disable show/hide effects on old browsers that don't support CSS animations or transforms, 
 		// old IOS, Android and Opera mobile. Blackberry seems to work fine, even older models.
 		var oldPhone = _features.isOldIOSPhone || _features.isOldAndroid || _features.isMobileOpera;
+
+		_features.hideScroll = (_options.hideScroll && !oldPhone && _options.modal && document.body.clientWidth);
+        if (_features.hideScroll) {
+            _features.restoreScroll = document.body.getAttribute('style');
+            document.body.style.width = window.getComputedStyle(document.body).width;
+            document.body.style.overflow = 'hidden';
+        }
+
 		if(!_features.animationName || !_features.transform || oldPhone) {
 			_options.showAnimationDuration = _options.hideAnimationDuration = 0;
 		}
@@ -989,6 +1000,14 @@ var publicMethods = {
 		_isDestroying = true;
 		_shout('close');
 		_unbindEvents();
+
+		if (_features.hideScroll) {
+            if (_features.restoreScroll) {
+                document.body.setAttribute('style', _features.restoreScroll);
+            } else {
+                document.body.removeAttribute('style');
+            }
+        }
 
 		_showOrHide(self.currItem, null, true, self.destroy);
 	},
@@ -1350,7 +1369,7 @@ var publicMethods = {
  * separated from @core.js for readability
  */
 
-var MIN_SWIPE_DISTANCE = 30,
+var MIN_SWIPE_DISTANCE = 100,
 	DIRECTION_CHECK_OFFSET = 10; // amount of pixels to drag to determine direction of swipe
 
 var _gestureStartTime,
@@ -3428,7 +3447,8 @@ _registerModule('DesktopZoom', {
 			centerPoint = centerPoint || {x:_viewportSize.x/2 + _offset.x, y:_viewportSize.y/2 + _offset.y };
 
 			var doubleTapZoomLevel = _options.getDoubleTapZoom(true, self.currItem);
-			var zoomOut = _currZoomLevel === doubleTapZoomLevel;
+			// var zoomOut = _currZoomLevel === doubleTapZoomLevel;
+			var zoomOut = _currZoomLevel > 1;
 			
 			self.mouseZoomedIn = !zoomOut;
 
@@ -3556,7 +3576,7 @@ var _historyUpdateTimeout,
 			// carry forward any custom pid assigned to the item
 			pid = item.pid;
 		}
-		var newHash = _initialHash + '&'  +  'gid=' + _options.galleryUID + '&' + 'pid=' + pid;
+		var newHash = _initialHash + 'image-viewer'; // '&'  +  'gid=' + _options.galleryUID + '&' + 'pid=' + pid;
 
 		if(!_historyChanged) {
 			if(_windowLoc.hash.indexOf(newHash) === -1) {
@@ -3729,6 +3749,99 @@ _registerModule('History', {
 
 
 /*>>history*/
+
+/*>>animate-slide*/
+/**
+ *
+ * animate-slide.js
+ *
+ * - Adds public methods prevAnim() and nextAnim() which animates
+ *   the slide transition when switching to the previous or next
+ *   slide respectively
+ *
+ */
+
+var slideAnim = function(dir) {
+
+	var itemsDiff = dir,
+		itemChanged,
+		nextCircle;
+
+	if(!_mainScrollAnimating) {
+		_currZoomedItemIndex = _currentItemIndex;
+	}
+
+	if(itemsDiff) {
+
+		_currentItemIndex += itemsDiff;
+
+		if(_currentItemIndex < 0) {
+			_currentItemIndex = _options.loop ? _getNumItems()-1 : 0;
+			nextCircle = true;
+		} else if(_currentItemIndex >= _getNumItems()) {
+			_currentItemIndex = _options.loop ? 0 : _getNumItems()-1;
+			nextCircle = true;
+		}
+
+		if(!nextCircle || _options.loop) {
+			_indexDiff += itemsDiff;
+			_currPositionIndex -= itemsDiff;
+			itemChanged = true;
+		}
+	}
+
+	var animateToX = _slideSize.x * _currPositionIndex;
+	var animateToDist = Math.abs( animateToX - _mainScrollPos.x );
+	var finishAnimDuration = (animateToDist > 4000) ? 400 : 300;
+
+	if(_currZoomedItemIndex === _currentItemIndex) {
+		itemChanged = false;
+	}
+
+	_mainScrollAnimating = true;
+
+	_shout('mainScrollAnimStart');
+
+	_animateProp('mainScroll', _mainScrollPos.x, animateToX, finishAnimDuration, framework.easing.cubic.out,
+		_moveMainScroll,
+		function() {
+			_stopAllAnimations();
+			_mainScrollAnimating = false;
+			_currZoomedItemIndex = -1;
+
+			if(itemChanged || _currZoomedItemIndex !== _currentItemIndex) {
+				self.updateCurrItem();
+			}
+
+			_shout('mainScrollAnimComplete');
+		}
+	);
+
+	if(itemChanged) {
+		self.updateCurrItem(true);
+	}
+
+	return itemChanged;
+};
+
+
+_registerModule('AnimateSlide', {
+
+	publicMethods: {
+
+		initAnimateSlide: function() {},
+
+		nextAnim: function(){
+			slideAnim(1);
+		},
+
+		prevAnim: function(){
+			slideAnim(-1);
+		}
+	}
+});
+
+/*>>animate-slide*/
 	framework.extend(self, publicMethods); };
 	return PhotoSwipe;
 });
